@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Manager</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f5f5f5; }
+    header { background: #4a90e2; color: #fff; padding: 1rem; text-align: center; }
+    main { max-width: 720px; margin: 1.5rem auto; padding: 1rem; background: #fff; box-shadow: 0 0 16px rgba(0,0,0,.08); }
+    form { display: flex; gap: .5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+    input[type=text] { flex: 1 1 240px; padding: .75rem; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: .75rem 1rem; border: none; border-radius: 4px; background: #4a90e2; color: #fff; cursor: pointer; }
+    button:hover { opacity: .95; }
+    .filter-group { margin-bottom: 1rem; display: flex; gap: .5rem; flex-wrap: wrap; }
+    .filter-group button.active { background: #2f6fb2; }
+    ul { list-style: none; padding: 0; margin: 0; }
+    li { display: flex; align-items: center; justify-content: space-between; padding: .75rem; border-bottom: 1px solid #eee; }
+    li.completed span { text-decoration: line-through; color: #888; }
+    .task-controls button { margin-left: .4rem; background: #888; }
+    .task-controls button:hover { opacity: .9; }
+    #empty-state { color: #666; text-align: center; display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Task Manager</h1>
+  </header>
+  <main>
+    <div class="filter-group">
+      <button type="button" data-filter="all" class="active">All</button>
+      <button type="button" data-filter="active">Active</button>
+      <button type="button" data-filter="completed">Completed</button>
+    </div>
+    <form id="task-form">
+      <input id="task-text" type="text" placeholder="Enter new task" autocomplete="off">
+      <button type="submit">Add Task</button>
+    </form>
+    <ul id="task-list"></ul>
+    <p id="empty-state">No tasks yet.</p>
+  </main>
+  <script>
+    const taskForm = document.getElementById('task-form');
+    const taskText = document.getElementById('task-text');
+    const taskList = document.getElementById('task-list');
+    const emptyState = document.getElementById('empty-state');
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
+    let currentFilter = 'all';
+
+    function saveTasks() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = '';
+      const filtered = tasks.filter(task => currentFilter === 'all' || task.completed === (currentFilter === 'completed'));
+      if (!filtered.length) {
+        emptyState.style.display = 'block';
+        return;
+      }
+      emptyState.style.display = 'none';
+      filtered.forEach(task => {
+        const li = document.createElement('li');
+        li.className = task.completed ? 'completed' : '';
+
+        const text = document.createElement('span');
+        text.textContent = task.text;
+        text.style.flex = '1';
+
+        const controls = document.createElement('div');
+        controls.className = 'task-controls';
+
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.textContent = task.completed ? 'Undo' : 'Done';
+        toggle.addEventListener('click', () => {
+          task.completed = !task.completed;
+          saveTasks();
+          renderTasks();
+        });
+
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.textContent = 'Delete';
+        remove.addEventListener('click', () => {
+          tasks = tasks.filter(t => t.id !== task.id);
+          saveTasks();
+          renderTasks();
+        });
+
+        controls.append(toggle, remove);
+        li.append(text, controls);
+        taskList.append(li);
+      });
+    }
+
+    taskForm.addEventListener('submit', event => {
+      event.preventDefault();
+      const text = taskText.value.trim();
+      if (!text) return;
+      tasks.push({ id: Date.now(), text, completed: false });
+      taskText.value = '';
+      saveTasks();
+      renderTasks();
+    });
+
+    filterButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        currentFilter = button.dataset.filter;
+        filterButtons.forEach(btn => btn.classList.toggle('active', btn === button));
+        renderTasks();
+      });
+    });
+
+    renderTasks();
+  </script>
+</body>
+</html>
